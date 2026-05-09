@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeneRank — Turning Uncertain Variants Into Answers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0B1F4A;
+    --navy-mid: #132B63;
+    --blue: #1A5DC8;
+    --blue-bright: #2C7BE5;
+    --accent: #4DAAFF;
+    --accent-light: #C8E4FF;
+    --white: #FFFFFF;
+    --off-white: #F5F7FA;
+    --text-dark: #0B1F4A;
+    --text-mid: #3D5070;
+    --text-muted: #6B80A0;
+    --border: rgba(11,31,74,0.10);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    color: var(--text-dark);
+    background: var(--white);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Inter', sans-serif;
+    line-height: 1.1;
+    font-optical-sizing: auto;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5%;
+    height: 68px;
+    background: rgba(11,31,74,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .nav-logo {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); }
+
+  .nav-cta {
+    background: var(--accent) !important;
+    color: var(--navy) !important;
+    font-weight: 600 !important;
+    padding: 9px 22px;
+    border-radius: 6px;
+    font-size: 14px !important;
+    transition: background 0.2s !important;
+  }
+
+  .nav-cta:hover { background: #80c4ff !important; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    padding: 120px 5% 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(44,123,229,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -150px; left: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(77,170,255,0.10) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    background: rgba(77,170,255,0.15);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid rgba(77,170,255,0.25);
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(38px, 5vw, 60px);
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 24px;
+    letter-spacing: -1.5px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 40px;
+    line-height: 1.75;
+    font-weight: 300;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--navy);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 30px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    display: inline-block;
+  }
+
+  .btn-primary:hover { background: #80c4ff; transform: translateY(-1px); }
+
+  .btn-ghost {
+    color: rgba(255,255,255,0.65);
+    font-size: 15px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+  }
+
+  .btn-ghost:hover { color: var(--white); }
+
+  .btn-ghost::after { content: '→'; transition: transform 0.2s; }
+  .btn-ghost:hover::after { transform: translateX(4px); }
+
+  /* Hero visual */
+  .hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .dna-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+  }
+
+  .dna-card-title {
+    font-family: 'Inter', sans-serif;
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .candidate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .candidate-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    animation: fadeSlide 0.6s both;
+  }
+
+  .candidate-row.top {
+    background: rgba(77,170,255,0.12);
+    border-color: rgba(77,170,255,0.3);
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .candidate-row:nth-child(1) { animation-delay: 0.1s; }
+  .candidate-row:nth-child(2) { animation-delay: 0.2s; }
+  .candidate-row:nth-child(3) { animation-delay: 0.3s; }
+  .candidate-row:nth-child(4) { animation-delay: 0.4s; }
+  .candidate-row:nth-child(5) { animation-delay: 0.5s; }
+
+  .candidate-rank {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    width: 24px;
+  }
+
+  .candidate-gene {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--white);
+    flex: 1;
+  }
+
+  .candidate-score {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+
+  .candidate-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 4px;
+    background: rgba(77,170,255,0.2);
+    color: var(--accent);
+  }
+
+  .dna-card-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    background: var(--blue);
+    padding: 44px 5%;
+  }
+
+  .stats-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 0 20px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-number {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(36px, 4.5vw, 56px);
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 110px 5%;
+  }
+
+  .section-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 16px;
+  }
+
+  .section-h2 {
+    font-size: clamp(30px, 4vw, 48px);
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  .section-h2 em {
+    font-style: normal;
+    color: var(--blue);
+  }
+
+  .section-lead {
+    font-size: 18px;
+    color: var(--text-mid);
+    font-weight: 300;
+    max-width: 600px;
+    line-height: 1.75;
+  }
+
+  /* ── PROBLEM ── */
+  .problem-section { background: var(--off-white); }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+    margin-top: 60px;
+  }
+
+  .problem-text p {
+    font-size: 17px;
+    color: var(--text-mid);
+    line-height: 1.8;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+
+  .problem-highlight {
+    background: rgba(11,31,74,0.05);
+    border-left: 3px solid var(--blue);
+    padding: 18px 24px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 28px;
+  }
+
+  .problem-highlight strong {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--navy);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .problem-highlight span {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .problem-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .pill-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .pill-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #D1D9E8;
+    flex-shrink: 0;
+  }
+
+  .pill-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .pill-badge-vus {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #FFF0EB;
+    color: #C03000;
+    border: 1px solid #FFCCB3;
+  }
+
+  .pill-badge-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: #EEF2F8;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── SOLUTION ── */
+  .solution-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+    margin-top: 60px;
+  }
+
+  .solution-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .sol-card {
+    background: var(--off-white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .sol-card:hover {
+    border-color: rgba(26,93,200,0.3);
+    box-shadow: 0 4px 24px rgba(26,93,200,0.07);
+  }
+
+  .sol-icon {
+    width: 44px; height: 44px;
+    background: var(--navy);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+  }
+
+  .sol-card h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+
+  .sol-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    font-weight: 300;
+  }
+
+  /* ── PROCESS ── */
+  .process-section { background: var(--navy); }
+
+  .process-section .section-h2 { color: var(--white); }
+
+  .process-section .section-tag { color: var(--accent); }
+
+  .process-steps {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    margin-top: 60px;
+    position: relative;
+  }
+
+  .process-steps::before {
+    content: '';
+    position: absolute;
+    top: 28px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .process-step {
+    text-align: center;
+    padding: 0 12px;
+    position: relative;
+  }
+
+  .step-num {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--blue);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--white);
+    margin: 0 auto 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .step-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  /* ── CTA SECTION ── */
+  .cta-section {
+    background: var(--navy);
+    text-align: center;
+    padding: 120px 5%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(44,123,229,0.2) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .cta-section h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(36px, 4.5vw, 58px);
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .cta-section p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 44px;
+    font-weight: 300;
+    position: relative;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    max-width: 500px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .cta-input {
+    flex: 1;
+    padding: 14px 18px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .cta-input::placeholder { color: rgba(255,255,255,0.3); }
+  .cta-input:focus { border-color: rgba(77,170,255,0.5); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: #060F26;
+    padding: 48px 5%;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-logo {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--white);
+    text-decoration: none;
+  }
+
+  .footer-logo span { color: var(--accent); }
+
+  .footer-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: 14px;
+    color: rgba(255,255,255,0.35);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: rgba(255,255,255,0.7); }
+
+  .footer-copy {
+    font-size: 13px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(6,15,38,0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 48px;
+    max-width: 480px;
+    width: 90%;
+    position: relative;
+    animation: modalIn 0.3s cubic-bezier(0.22,1,0.36,1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.94) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 18px; right: 20px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .modal p {
+    font-size: 15px;
+    color: var(--text-mid);
+    margin-bottom: 28px;
+    font-weight: 300;
+  }
+
+  .modal-field {
+    margin-bottom: 16px;
+  }
+
+  .modal-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+
+  .modal-field input,
+  .modal-field select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: var(--navy);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .modal-field input:focus,
+  .modal-field select:focus { border-color: var(--blue); }
+
+  .modal-submit {
+    width: 100%;
+    padding: 14px;
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s;
+  }
+
+  .modal-submit:hover { background: var(--blue); }
+
+  /* RESPONSIVE */
+  @media (max-width: 860px) {
+    .hero-inner, .problem-grid, .solution-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-visual { display: none; }
+    .stats-inner { grid-template-columns: 1fr; gap: 28px; }
+    .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
+    .stat-item:last-child { border-bottom: none; }
+    .process-steps { grid-template-columns: 1fr 1fr; gap: 36px; }
+    .process-steps::before { display: none; }
+    .team-grid { grid-template-columns: 1fr 1fr; }
+    .footer-inner { flex-direction: column; gap: 20px; text-align: center; }
+    .nav-links { display: none; }
+    .cta-form { flex-direction: column; }
+  }
+
+  @media (max-width: 560px) {
+    .team-grid { grid-template-columns: 1fr; }
+    .process-steps { grid-template-columns: 1fr; }
+    section { padding: 70px 5%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">Gene<span>Rank</span></a>
+  <ul class="nav-links">
+    <li><a href="#problem">The Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#science">Science</a></li>
+    <li><a href="#process">Pipeline</a></li>
+    <li><a href="#" class="nav-cta" onclick="openModal(); return false;">Request a Demo</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-tag">Clinical Genomics · Structural AI</div>
+      <h1>Genomic data already holds the <em>answer.</em> We find it.</h1>
+      <p>The average rare disease patient endures 4.7 years of inconclusive results — not from a lack of data, but from a lack of tools capable of interpreting it. GeneRank applies structural proteomics and phenotype-aware machine learning to rank what actually matters.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary" onclick="openModal(); return false;">Request a Demo</a>
+        <a href="#solution" class="btn-ghost">See how it works</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="dna-card">
+        <div class="dna-card-title">Ranked diagnostic output</div>
+        <div class="candidate-list">
+          <div class="candidate-row top">
+            <div class="candidate-rank">#1</div>
+            <div class="candidate-gene">BRCA2 — p.Arg2988Cys</div>
+            <div class="candidate-badge">97%</div>
+          </div>
+          <div class="candidate-row top">
+            <div class="candidate-rank">#2</div>
+            <div class="candidate-gene">PTEN — c.388C>T</div>
+            <div class="candidate-badge">91%</div>
+          </div>
+          <div class="candidate-row top">
+            <div class="candidate-rank">#3</div>
+            <div class="candidate-gene">PALB2 — p.Leu939*</div>
+            <div class="candidate-badge">84%</div>
+          </div>
+          <div class="candidate-row">
+            <div class="candidate-rank">#4</div>
+            <div class="candidate-gene">ATM — c.1009C>T</div>
+            <div class="candidate-score">72%</div>
+          </div>
+          <div class="candidate-row">
+            <div class="candidate-rank">#5</div>
+            <div class="candidate-gene">CHEK2 — p.Ile157Thr</div>
+            <div class="candidate-score">61%</div>
+          </div>
+        </div>
+        <div class="dna-card-footer">5 candidates · same day · from 847 variants</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-number">100×</div>
+      <div class="stat-label">Fewer candidates to review</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">4.7 yrs</div>
+      <div class="stat-label">Avg. diagnostic wait — cut to hours</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">300M+</div>
+      <div class="stat-label">Rare disease patients who need this</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<section class="problem-section" id="problem">
+  <div class="section-inner">
+    <div class="section-tag">The Problem</div>
+    <h2 class="section-h2">A classification system built for <em>common variants</em></h2>
+    <p class="section-lead">Clinical genomics has a frequency problem. Existing tools use population allele frequency and prior case databases to classify variants — a methodology that systematically fails for rare disease.</p>
+
+    <div class="problem-grid">
+      <div class="problem-text">
+        <p>When a variant appears fewer than five times in gnomAD or ClinVar, classification algorithms default to "Variant of Uncertain Significance" — a label that functionally means "we don't know." That label ends the diagnostic journey for most patients.</p>
+        <p>Whole-genome and exome sequencing are now routine, yet each sequencing run returns 500–1,000 candidate variants with no mechanistic prioritisation. Clinicians are handed a spreadsheet when they need a ranked differential. Manual expert review of each candidate can take weeks — and expertise in every affected gene simply doesn't exist.</p>
+        <div class="problem-highlight">
+          <strong>~98% of rare variants</strong>
+          <span>are too infrequent for population-frequency tools to classify — leaving patients in diagnostic limbo</span>
+        </div>
+      </div>
+      <div class="problem-visual">
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">ANKRD36C — c.1045G>A</div>
+          <div class="pill-badge-vus">VUS</div>
+        </div>
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">ZNF717 — p.Arg345His</div>
+          <div class="pill-badge-vus">VUS</div>
+        </div>
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">MUC16 — c.4291C>T</div>
+          <div class="pill-badge-count">Unknown</div>
+        </div>
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">DNAH5 — p.Val2799Ile</div>
+          <div class="pill-badge-vus">VUS</div>
+        </div>
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">OBSCN — c.22418A>G</div>
+          <div class="pill-badge-vus">VUS</div>
+        </div>
+        <div class="pill-row">
+          <div class="pill-dot"></div>
+          <div class="pill-label">+ 842 more variants...</div>
+          <div class="pill-badge-count">Unranked</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION -->
+<section id="solution">
+  <div class="section-inner">
+    <div class="section-tag">How GeneRank Works</div>
+    <h2 class="section-h2">Structure-first prioritisation — <em>not frequency matching</em></h2>
+    <p class="section-lead">We evaluate variants the way a biochemist would: by asking what they do to the protein. Two complementary engines work in tandem to reduce a candidate list from hundreds to a clinically actionable handful.</p>
+
+    <div class="solution-grid">
+      <div class="solution-cards">
+        <div class="sol-card">
+          <div class="sol-icon">🧬</div>
+          <div>
+            <h3>AlphaFold-Powered Structure Prediction</h3>
+            <p>Each candidate variant is mapped onto a full 3D protein model generated using AlphaFold2. We evaluate predicted local distance difference test (pLDDT) scores and per-residue confidence before running mutation-specific folding simulations to detect structural perturbations — without relying on prior case data.</p>
+          </div>
+        </div>
+        <div class="sol-card">
+          <div class="sol-icon">⚛️</div>
+          <div>
+            <h3>Molecular Dynamics & Binding Affinity Scoring</h3>
+            <p>Shortlisted structures are subjected to molecular dynamics simulations to assess thermodynamic stability (ΔΔG), active-site geometry, and ligand-binding disruption. Variants that destabilise protein conformation beyond a biophysical threshold are flagged as high-priority candidates — regardless of whether similar mutations have been catalogued before.</p>
+          </div>
+        </div>
+        <div class="sol-card">
+          <div class="sol-icon">👥</div>
+          <div>
+            <h3>HPO-Based Phenotype Similarity Matching</h3>
+            <p>Remaining candidates are scored against the patient's Human Phenotype Ontology (HPO) profile and cross-referenced against international rare disease registries including Orphanet, OMIM, and disease-specific cohort databases. Semantic similarity scoring surfaces gene–disease relationships that frequency-based tools cannot detect.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-tag">Input formats supported</div>
+        <h3 style="font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--navy); letter-spacing:-1px; margin-bottom:20px; line-height:1.15;">Plug into your existing workflow</h3>
+        <p style="color:var(--text-mid); font-size:17px; font-weight:300; line-height:1.8; margin-bottom:24px;">GeneRank ingests standard variant call files (VCF/gVCF), aligned reads (BAM/CRAM), or raw FASTQ. No proprietary formats, no re-sequencing. The patient's existing genomic data is all we need.</p>
+        <p style="color:var(--text-mid); font-size:17px; font-weight:300; line-height:1.8; margin-bottom:24px;">Our pipeline integrates with LIMS systems and can be deployed on-premise or via secure cloud API — with SOC 2 Type II controls and full HIPAA compliance.</p>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--off-white); border-radius:10px; border:1px solid var(--border);">
+            <span style="font-size:18px;">🔬</span>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:var(--navy); margin-bottom:2px;">VCF / gVCF / BAM / CRAM / FASTQ</div>
+              <div style="font-size:12px; color:var(--text-muted);">All standard genomic file formats accepted</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--off-white); border-radius:10px; border:1px solid var(--border);">
+            <span style="font-size:18px;">🔒</span>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:var(--navy); margin-bottom:2px;">HIPAA-compliant · SOC 2 Type II</div>
+              <div style="font-size:12px; color:var(--text-muted);">On-premise or secure cloud deployment</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--off-white); border-radius:10px; border:1px solid var(--border);">
+            <span style="font-size:18px;">⚡</span>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:var(--navy); margin-bottom:2px;">Results in hours, not weeks</div>
+              <div style="font-size:12px; color:var(--text-muted);">GPU-accelerated simulation pipeline</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- WHY STRUCTURE -->
+<section id="science" style="background:var(--white); padding:110px 5%;">
+  <div class="section-inner">
+    <div class="section-tag">The Science</div>
+    <h2 class="section-h2">Why protein structure is the <em>missing signal</em></h2>
+    <p class="section-lead">Frequency-based tools ask "have we seen this before?" Structure-based tools ask "what does this change do to the protein?" For rare variants, only the second question has an answer.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:48px; margin-top:60px; align-items:start;">
+      <div>
+        <h3 style="font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:var(--navy); margin-bottom:16px;">AlphaFold2 as a diagnostic substrate</h3>
+        <p style="color:var(--text-mid); font-size:16px; font-weight:300; line-height:1.8; margin-bottom:20px;">DeepMind's AlphaFold2 predicts protein structure at near-experimental accuracy for virtually every human protein. GeneRank uses it not just to model wild-type structure, but to model <em>both</em> the reference and each mutant sequence — then computes structural divergence at the residue level.</p>
+        <p style="color:var(--text-mid); font-size:16px; font-weight:300; line-height:1.8;">Variants that produce large pLDDT drops in functional domains, disrupted β-sheet geometry, or lost secondary structure at known binding interfaces are scored as structurally damaging — a classification that doesn't require a single prior clinical case.</p>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:var(--navy); margin-bottom:16px;">Molecular dynamics beyond static snapshots</h3>
+        <p style="color:var(--text-mid); font-size:16px; font-weight:300; line-height:1.8; margin-bottom:20px;">Static structure alone doesn't capture protein behaviour. Our GPU-accelerated MD pipeline runs nanosecond-scale simulations to measure thermodynamic stability changes (ΔΔG via FoldX + Rosetta ensemble scoring), conformational drift, and active-site RMSD under physiological conditions.</p>
+        <p style="color:var(--text-mid); font-size:16px; font-weight:300; line-height:1.8;">This eliminates candidates that appear structurally plausible at rest but become unstable at body temperature — a frequent source of false positives in static-model pipelines.</p>
+      </div>
+    </div>
+
+    <!-- Tech badges row -->
+    <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:52px; padding-top:40px; border-top:1px solid var(--border);">
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">AlphaFold2</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">FoldX ΔΔG scoring</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">Rosetta ensemble</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">Molecular dynamics (GPU)</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">Ensembl VEP annotation</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">gnomAD v4 filtering</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">HPO semantic similarity</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">Orphanet · OMIM · ClinVar</div>
+      <div style="padding:10px 18px; border-radius:8px; background:var(--off-white); border:1px solid var(--border); font-size:13px; font-weight:500; color:var(--navy);">ACMG-aligned reporting</div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="process-section" id="process">
+  <div class="section-inner">
+    <div class="section-tag">The GeneRank Pipeline</div>
+    <h2 class="section-h2" style="color:var(--white);">Five stages from VCF to verdict</h2>
+    <div class="process-steps">
+      <div class="process-step">
+        <div class="step-num">1</div>
+        <div class="step-title">Variant Ingestion</div>
+        <div class="step-desc">Accepts VCF, gVCF, BAM, CRAM, or FASTQ. Variants are normalised, annotated with Ensembl VEP, and filtered against population-frequency databases (gnomAD, 1000 Genomes).</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">2</div>
+        <div class="step-title">AlphaFold Structure Modelling</div>
+        <div class="step-desc">Each candidate is modelled using AlphaFold2 on both wild-type and mutant sequences. pLDDT confidence scores and predicted aligned error (PAE) matrices flag structurally significant changes.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">3</div>
+        <div class="step-title">Biophysical Simulation</div>
+        <div class="step-desc">Shortlisted variants undergo molecular dynamics simulation. ΔΔG folding stability, active-site geometry deviation, and protein–protein interface disruption are scored to eliminate structurally implausible candidates.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">4</div>
+        <div class="step-title">Phenotype Ontology Matching</div>
+        <div class="step-desc">The patient's HPO terms are semantically matched against OMIM, Orphanet, and curated gene–disease associations. Remaining candidates are re-ranked by phenotypic concordance score.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">5</div>
+        <div class="step-title">Clinical Report</div>
+        <div class="step-desc">5–10 prioritised variants delivered with ACMG-aligned evidence summaries, confidence intervals, supporting literature, and suggested next diagnostic steps — same day.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Stop returning VUS. Start returning diagnoses.</h2>
+  <p>GeneRank is in early clinical access. We're working with a select group of diagnostic labs and rare disease programmes — if that's you, let's talk.</p>
+  <div class="cta-form">
+    <input class="cta-input" type="email" placeholder="your@institution.edu">
+    <a href="#" class="btn-primary" onclick="openModal(); return false;">Request Demo</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <a href="#" class="footer-logo">Gene<span>Rank</span></a>
+    <ul class="footer-links">
+      <li><a href="#">Science</a></li>
+      <li><a href="#">For Clinicians</a></li>
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+    <div class="footer-copy">© 2025 GeneRank. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- DEMO MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3>Request a Demo</h3>
+    <p>Tell us about your institution and we'll be in touch within 24 hours.</p>
+    <div class="modal-field">
+      <label>Full name</label>
+      <input type="text" placeholder="Dr. Jane Smith">
+    </div>
+    <div class="modal-field">
+      <label>Institutional email</label>
+      <input type="email" placeholder="you@hospital.org">
+    </div>
+    <div class="modal-field">
+      <label>Institution / Hospital</label>
+      <input type="text" placeholder="Mayo Clinic">
+    </div>
+    <div class="modal-field">
+      <label>Role</label>
+      <select>
+        <option>Physician / Clinician</option>
+        <option>Clinical Geneticist</option>
+        <option>Researcher</option>
+        <option>Lab Director</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <button class="modal-submit" onclick="submitDemo()">Submit Request →</button>
+  </div>
+</div>
+
+<script>
+  function openModal() {
+    document.getElementById('modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function submitDemo() {
+    const btn = document.querySelector('.modal-submit');
+    btn.textContent = '✓ Request received!';
+    btn.style.background = '#1A9E60';
+    setTimeout(closeModal, 1800);
+  }
+
+  // Smooth nav highlight
+  const sections = document.querySelectorAll('section[id]');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY + 100;
+    sections.forEach(s => {
+      const top = s.offsetTop, h = s.offsetHeight;
+      const link = document.querySelector(`nav a[href="#${s.id}"]`);
+      if (link) link.style.color = (y >= top && y < top + h) ? '#fff' : '';
+    });
+  });
+</script>
+</body>
+</html>
