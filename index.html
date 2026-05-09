@@ -312,12 +312,14 @@
   /* ── STATS BAR ── */
   .stats-bar {
     background: var(--blue);
-    padding: 44px 5%;
+    padding: 44px 0;
   }
 
   .stats-inner {
     max-width: 1200px;
     margin: 0 auto;
+    padding-left: 5%;
+    padding-right: 5%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
@@ -351,12 +353,24 @@
 
   /* ── SECTIONS ── */
   section {
-    padding: 110px 5%;
+    padding: 110px 0;
   }
 
   .section-inner {
     max-width: 1200px;
     margin: 0 auto;
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .full-bleed {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .full-bleed > .section-inner {
+    padding-left: 5%;
+    padding-right: 5%;
   }
 
   .section-tag {
@@ -604,7 +618,8 @@
   .cta-section {
     background: var(--navy);
     text-align: center;
-    padding: 120px 5%;
+    padding-top: 120px;
+    padding-bottom: 120px;
     position: relative;
     overflow: hidden;
   }
@@ -665,13 +680,14 @@
   /* ── FOOTER ── */
   footer {
     background: #060F26;
-    padding: 48px 5%;
+    padding: 48px 0;
     border-top: 1px solid rgba(255,255,255,0.06);
   }
 
   .footer-inner {
     max-width: 1200px;
     margin: 0 auto;
+    padding: 0 5%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -826,7 +842,7 @@
   @media (max-width: 560px) {
     .team-grid { grid-template-columns: 1fr; }
     .process-steps { grid-template-columns: 1fr; }
-    section { padding: 70px 5%; }
+    section { padding: 70px 0; }
   }
 </style>
 </head>
@@ -1025,7 +1041,8 @@
     </div>
 
 <!-- WHY STRUCTURE -->
-<section id="science" style="background:var(--white); padding:110px 5%;">
+</section>
+<section id="science" style="background:var(--white);">
   <div class="section-inner">
     <div class="section-tag">The Science</div>
     <h2 class="section-h2">Why protein structure is the <em>missing signal</em></h2>
@@ -1060,7 +1077,7 @@
 </section>
 
 <!-- PROCESS -->
-<section class="process-section" id="process">
+<section class="process-section" id="process" style="padding-left:0;padding-right:0;">
   <div class="section-inner">
     <div class="section-tag">The GeneRank Pipeline</div>
     <h2 class="section-h2" style="color:var(--white);">Five stages from VCF to verdict</h2>
@@ -1095,7 +1112,7 @@
 </section>
 
 <!-- CTA -->
-<section class="cta-section">
+<section class="cta-section" style="padding-left:0;padding-right:0;">
   <h2>Stop returning VUS. Start returning diagnoses.</h2>
   <p>GeneRank is in early clinical access. We're working with a select group of diagnostic labs and rare disease programmes — if that's you, let's talk.</p>
   <div class="cta-form">
@@ -1105,7 +1122,7 @@
 </section>
 
 <!-- FOOTER -->
-<footer>
+<footer style="padding-left:0;padding-right:0;">
   <div class="footer-inner">
     <a href="#" class="footer-logo">Gene<span>Rank</span></a>
     <ul class="footer-links">
